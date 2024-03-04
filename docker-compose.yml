@@ -1,0 +1,64 @@
+version: '3'
+
+services:
+  mongo-db:
+    container_name: mongo_database_container
+    image: mongo:latest
+    restart: always
+    volumes:
+      - mongo_db:/data/db
+    ports:
+      - "27018:27017"
+    networks:
+      - app-network  # Use the same internal network
+
+  rabbitmq:
+    container_name: rabbitmq_container
+    image: rabbitmq:3-management
+    restart: always
+    ports:
+      - "5672:5672"  # AMQP port
+      - "15672:15672"  # Management UI port
+    networks:
+      - app-network  # Use the same internal network
+
+  product:
+    build: ./productService
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./productService/.env
+    depends_on:
+      - mongo-db
+      - rabbitmq  # Ensure RabbitMQ is started before the app container
+    networks:
+      - app-network  # Use the same internal network
+  order:
+    build: ./orderService
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./orderService/.env
+    depends_on:
+      - mongo-db
+      - rabbitmq  # Ensure RabbitMQ is started before the app container
+    networks:
+      - app-network  # Use the same internal network
+  auth:
+    build: ./auth
+    ports:
+      - "5000:5000"
+    env_file:
+      - ./auth/.env
+    depends_on:
+      - mongo-db
+      - rabbitmq  # Ensure RabbitMQ is started before the app container
+    networks:
+      - app-network  # Use the same internal network
+
+networks:
+  app-network:  # Use the same internal network name
+    driver: bridge
+
+volumes:
+  mongo_db: {}
